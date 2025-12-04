@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = 8456865406  # твой Telegram ID (можно менять)
+ADMIN_ID = 7209803923
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
