@@ -1,82 +1,80 @@
 # db.py
-import os
-import asyncpg
-from datetime import datetime
-from typing import Optional
+import aiosqlite
+from config import DB_PATH
+import time
 
-DATABASE_URL = os.getenv("DATABASE_URL")  # must be set in Render env
+CREATE_USERS = """
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY,
+    username TEXT,
+    first_name TEXT,
+    joined_at INTEGER,
+    referrer_id INTEGER DEFAULT NULL,
+    balance REAL DEFAULT 0,
+    vip_until INTEGER DEFAULT 0
+);
+"""
 
-async def create_pool():
-    if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL is not set")
-    pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
-    return pool
+CREATE_EVENTS = """
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    event_type TEXT,
+    payload TEXT,
+    created_at INTEGER
+);
+"""
 
-async def init_db(pool):
-    async with pool.acquire() as conn:
-        await conn.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            user_id BIGINT UNIQUE,
-            username TEXT,
-            first_name TEXT,
-            referrer_id BIGINT,
-            balance NUMERIC DEFAULT 0,
-            earned_total NUMERIC DEFAULT 0,
-            joined_at TIMESTAMP DEFAULT now()
-        );
-        """)
-        await conn.execute("""
-        CREATE TABLE IF NOT EXISTS partners (
-            id SERIAL PRIMARY KEY,
-            name TEXT,
-            url_template TEXT,
-            category TEXT,
-            partner_share NUMERIC DEFAULT 0.30,
-            user_share NUMERIC DEFAULT 0.20,
-            created_at TIMESTAMP DEFAULT now()
-        );
-        """)
-        await conn.execute("""
-        CREATE TABLE IF NOT EXISTS partner_clicks (
-            id SERIAL PRIMARY KEY,
-            partner_id INTEGER REFERENCES partners(id),
-            user_id BIGINT,
-            created_at TIMESTAMP DEFAULT now()
-        );
-        """)
-        await conn.execute("""
-        CREATE TABLE IF NOT EXISTS transactions (
-            id SERIAL PRIMARY KEY,
-            user_id BIGINT,
-            partner_id INTEGER,
-            amount NUMERIC,
-            user_cashback NUMERIC,
-            platform_fee NUMERIC,
-            status TEXT DEFAULT 'pending',
-            note TEXT,
-            created_at TIMESTAMP DEFAULT now()
-        );
-        """)
-        await conn.execute("""
-        CREATE TABLE IF NOT EXISTS payout_requests (
-            id SERIAL PRIMARY KEY,
-            user_id BIGINT,
-            amount NUMERIC,
-            method TEXT,
-            details TEXT,
-            status TEXT DEFAULT 'pending',
-            created_at TIMESTAMP DEFAULT now()
-        );
-        """)
-        # ensure default partners exist
-        row = await conn.fetchrow("SELECT COUNT(*) AS c FROM partners")
-        if row and row["c"] == 0:
-            await conn.execute("""
-                INSERT INTO partners (name, url_template, category, partner_share, user_share)
-                VALUES ($1, $2, $3, $4, $5)
-            """, "Molniya VPN", "https://t.me/molniya_vpn_bot?start=john0_8_{user}", "vpn", 0.40, 0.20)
-            await conn.execute("""
-                INSERT INTO partners (name, url_template, category, partner_share, user_share)
-                VALUES ($1, $2, $3, $4, $5)
-            """, "Kovalenko VPN", "https://t.me/Kovalenkovpn_bot?start=john0_8_{user}", "vpn", 0.35, 0.20)
+async def init_db():
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(CREATE_USERS)
+        await db.execute(CREATE_EVENTS)
+        await db.commit()
+
+async def add_or_update_user(user):
+    ts = int(time.time())
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            INSERT INTO users(id, username, first_name, joined_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              username=excluded.username,
+              first_name=excluded.first_name
+        """, (user.id, user.username or "", user.first_name or "", ts))
+        await db.commit()
+
+async def set_referrer(user_id: int, ref_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET referrer_id = ? WHERE id = ?", (ref_id, user_id))
+        await db.commit()
+
+async def add_event(user_id, event_type, payload=""):
+    ts = int(time.time())
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("INSERT INTO events(user_id, event_type, payload, created_at) VALUES (?, ?, ?, ?)",
+                         (user_id, event_type, payload, ts))
+        await db.commit()
+
+async def get_stats():
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("SELECT COUNT(*) FROM users")
+        users = (await cur.fetchone())[0]
+        cur = await db.execute("SELECT COUNT(*) FROM events")
+        events = (await cur.fetchone())[0]
+        return {"users": users, "events": events}
+
+async def add_balance(user_id: int, amount: float):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET balance = balance + ? WHERE id = ?", (amount, user_id))
+        await db.commit()
+
+async def set_vip(user_id: int, until_ts: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET vip_until = ? WHERE id = ?", (until_ts, user_id))
+        await db.commit()
+
+async def get_user(user_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("SELECT id, username, first_name, joined_at, referrer_id, balance, vip_until FROM users WHERE id = ?", (user_id,))
+        row = await cur.fetchone()
+        return row
