@@ -1,17 +1,16 @@
 from fastapi import FastAPI, Request
-from aiogram import Bot, Dispatcher
+from aiogram import Bot
 from aiogram.types import Update
-import asyncio
 
 from config import BOT_TOKEN, WEBHOOK_URL
 from db import init_db
-from bot.main import dp  # твой бот с хендлерами
+from bot.main import dp  # тут хендлеры
 
 app = FastAPI()
 bot = Bot(token=BOT_TOKEN)
 
 # ==============================
-# Установка WEBHOOK
+# Установка Webhook при запуске
 # ==============================
 @app.on_event("startup")
 async def on_startup():
@@ -19,9 +18,8 @@ async def on_startup():
     await bot.set_webhook(WEBHOOK_URL)
     print("Webhook установлен:", WEBHOOK_URL)
 
-
 # ==============================
-# Получение обновлений от Telegram
+# Обработка входящих обновлений Telegram
 # ==============================
 @app.post("/webhook")
 async def webhook(request: Request):
@@ -30,9 +28,8 @@ async def webhook(request: Request):
     await dp.feed_update(bot, update)
     return {"status": "ok"}
 
-
 # ==============================
-# Проверка состояния
+# Root endpoint
 # ==============================
 @app.get("/")
 async def home():
