@@ -1,2 +1,10 @@
 #!/bin/bash
-echo start
+
+# Запуск API
+python3 app.py &
+
+# Запуск Telegram-бота
+python3 main.py
+
+
+
