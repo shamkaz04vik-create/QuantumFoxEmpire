@@ -1,6 +1,5 @@
-aiogram==3.5.0
-fastapi
-uvicorn[standard]
+aiogram==3.4.1
 asyncpg
 aiohttp
-python-dotenv
+fastapi
+uvicorn
