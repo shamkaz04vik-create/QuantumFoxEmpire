@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = 7209803923
+ADMIN_ID = 7209803923  # твой Telegram ID
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -17,6 +17,17 @@ def main_menu():
     kb.button(text="💰 Заработок")
     kb.button(text="👤 Профиль")
     kb.button(text="📞 Поддержка")
+    kb.adjust(2)
+    return kb.as_markup(resize_keyboard=True)
+
+# ----------- Меню услуг -----------
+def services_menu():
+    kb = ReplyKeyboardBuilder()
+    kb.button(text="🧑‍💻 Создание ботов")
+    kb.button(text="🎨 Дизайн")
+    kb.button(text="📢 Реклама и продвижение")
+    kb.button(text="📱 Создание сайтов")
+    kb.button(text="🔙 Назад")
     kb.adjust(2)
     return kb.as_markup(resize_keyboard=True)
 
@@ -48,31 +59,63 @@ async def start_handler(message: types.Message):
 async def menu_handler(message: types.Message):
     text = message.text
 
-    # Кнопка услуги
+    # --- Каталог услуг ---
     if text == "💼 Услуги":
-        await message.answer("💼 Здесь скоро появится каталог услуг!")
-    
-    # Кнопка заработок
+        await message.answer("Выберите услугу:", reply_markup=services_menu())
+
+    elif text == "🧑‍💻 Создание ботов":
+        await message.answer(
+            "🧑‍💻 *Создание Telegram-ботов*\n"
+            "Цена: от 5000 ₽\n\n"
+            "Опишите задачу, и мы обсудим детали!",
+            parse_mode="Markdown"
+        )
+
+    elif text == "🎨 Дизайн":
+        await message.answer(
+            "🎨 *Дизайн (логотипы, баннеры, обложки)*\n"
+            "Цена: от 1000 ₽",
+            parse_mode="Markdown"
+        )
+
+    elif text == "📢 Реклама и продвижение":
+        await message.answer(
+            "📢 *Продвижение Telegram-каналов*\n"
+            "Цена: индивидуально.",
+            parse_mode="Markdown"
+        )
+
+    elif text == "📱 Создание сайтов":
+        await message.answer(
+            "📱 *Создание сайтов под ключ*\n"
+            "Цена: от 10 000 ₽",
+            parse_mode="Markdown"
+        )
+
+    elif text == "🔙 Назад":
+        await message.answer("Главное меню:", reply_markup=main_menu())
+
+    # --- Заработок ---
     elif text == "💰 Заработок":
-        await message.answer("💰 Скоро здесь появится система заработка!")
+        await message.answer("💰 Здесь скоро появится система заработка!")
 
-    # Кнопка профиль
+    # --- Профиль ---
     elif text == "👤 Профиль":
-        await message.answer(f"👤 Ваш ID: {message.from_user.id}")
+        await message.answer(f"👤 Ваш Telegram ID: {message.from_user.id}")
 
-    # Кнопка поддержка
+    # --- Поддержка ---
     elif text == "📞 Поддержка":
         await message.answer("Напишите нам: @your_support")
 
-    # Админские функции
-    elif text == "📢 Рассылка" and message.from_user.id == ADMIN_ID:
-        await message.answer("Введите текст рассылки:")
-
-    elif text == "📊 Статистика" and message.from_user.id == ADMIN_ID:
-        await message.answer("📊 Статистика будет позже.")
-
+    # --- Админские кнопки ---
     elif text == "🛠 Админ" and message.from_user.id == ADMIN_ID:
         await message.answer("Админ меню:", reply_markup=admin_menu())
+
+    elif text == "📢 Рассылка" and message.from_user.id == ADMIN_ID:
+        await message.answer("Введите текст рассылки (функция скоро будет добавлена).")
+
+    elif text == "📊 Статистика" and message.from_user.id == ADMIN_ID:
+        await message.answer("📊 Статистика появится позже.")
 
 async def main():
     await dp.start_polling(bot)
