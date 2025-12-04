@@ -4,4 +4,4 @@ app = FastAPI()
 
 @app.get("/")
 def home():
-    return {"status": "API работает!"}
+    return {"status": "API is running", "bot": "QuantumFoxEmpire"}
