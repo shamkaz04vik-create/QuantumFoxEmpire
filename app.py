@@ -1,10 +1,18 @@
-from flask import Flask
+from fastapi import FastAPI, Request
+from aiogram import Bot, Dispatcher
+import asyncio
+from config import BOT_TOKEN
+from bot import dp
 
-app = Flask(__name__)
+bot = Bot(token=BOT_TOKEN)
+app = FastAPI()
 
-@app.route("/")
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    update = await request.json()
+    await dp.feed_webhook_update(bot, update)
+    return {"status": "ok"}
+
+@app.get("/")
 def home():
-    return "QuantumFoxEmpire bot is running!"
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    return "Bot running"
