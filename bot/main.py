@@ -1,12 +1,32 @@
-from aiogram import Bot, Dispatcher, types
-from aiogram.utils import executor
-import os
+import asyncio
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import Message
+from aiogram.filters import CommandStart
 
-TOKEN = os.getenv("BOT_TOKEN") or "ТВОЙ_ТОКЕН"
+from config import BOT_TOKEN
+from ai import ai_answer
+from db import init_db
 
-bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
-@dp.message_handler(commands=['start'])
-async def start(message: types.Message):
-    await message.answer("Бот работает!")
+
+@dp.message(CommandStart())
+async def start_cmd(message: Message):
+    await message.answer("Бот работает! Напиши мне сообщение.")
+
+
+@dp.message(F.text)
+async def handle_message(message: Message):
+    user_text = message.text
+    ai_response = await ai_answer(user_text)
+    await message.answer(ai_response)
+
+
+async def main():
+    await init_db()
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
