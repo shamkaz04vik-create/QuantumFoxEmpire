@@ -1,9 +1,5 @@
-print("Quantum Fox Empire bot placeholder (full version scaffold).")
-from fastapi import FastAPI
-import os
+from bot.main import dp
+from aiogram.utils import executor
 
-app = FastAPI()
-
-@app.get("/")
-def home():
-    return {"status": "QuantumFox API working!"}
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates=True)
