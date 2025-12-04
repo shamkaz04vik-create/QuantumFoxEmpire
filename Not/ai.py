@@ -1,11 +1,14 @@
 # ai.py
 import aiohttp
-from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 import asyncio
+from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-async def ai_answer(prompt: str, model: str = OPENROUTER_MODEL, max_tokens: int = 700, temperature: float = 0.2) -> str:
+async def ai_answer(prompt: str, model: str = OPENROUTER_MODEL, max_tokens: int = 700, temperature: float = 0.3) -> str:
+    if not OPENROUTER_API_KEY:
+        return "Ошибка: OpenRouter API key не задан."
+
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -24,11 +27,9 @@ async def ai_answer(prompt: str, model: str = OPENROUTER_MODEL, max_tokens: int 
                     text = await resp.text()
                     return f"Ошибка OpenRouter ({resp.status}): {text}"
                 data = await resp.json()
-                # OpenRouter обычно возвращает data['choices'][0]['message']['content']
                 try:
                     return data["choices"][0]["message"]["content"]
                 except Exception:
-                    # fallback: pretty print
                     return str(data)
     except asyncio.TimeoutError:
         return "Ошибка: таймаут запроса к ИИ."
