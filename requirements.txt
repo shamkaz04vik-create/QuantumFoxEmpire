@@ -1,4 +1,6 @@
-aiogram==3.1.0b7
-aiohttp==3.8.4
-aiosqlite==0.19.0
-python-dotenv==1.0.0
+aiogram==3.5.0
+fastapi
+uvicorn[standard]
+aiohttp
+aiosqlite
+python-dotenv
