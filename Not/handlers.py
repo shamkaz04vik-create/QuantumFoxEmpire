@@ -1,51 +1,46 @@
 # handlers.py
 from aiogram import Router
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
-from config import VPN_PARTNERS
+from db import add_user_if_not_exists, get_user, list_partners, record_partner_click
 from ai import ai_answer
-from db import add_or_update_user, set_referrer, add_event, get_user
-from payments import simulate_purchase
+from payments import create_crypto_invoice, manual_payment_instructions
+from config import VPN_PARTNERS
 import time
 
 router = Router()
 
-def main_keyboard():
+def main_kb():
     kb = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton("🎛 Профиль"), KeyboardButton("💰 Заработок")],
         [KeyboardButton("🧰 Инструменты"), KeyboardButton("💼 Услуги")],
         [KeyboardButton("🧑‍🤝‍🧑 Реферальная система"), KeyboardButton("🔒 VPN Партнёрки")],
-        [KeyboardButton("🧠 AI"), KeyboardButton("💳 Купить VIP")]
+        [KeyboardButton("🤖 ИИ"), KeyboardButton("📤 Сообщить оплату")]
     ], resize_keyboard=True)
     return kb
 
 @router.message(Command("start"))
-async def start_cmd(message: Message):
-    # если в /start пришёл параметр (ref)
-    await add_or_update_user(message.from_user)
-    # check for start payload
-    payload = None
-    if message.text and len(message.text.split()) > 1:
-        payload = message.text.split(maxsplit=1)[1]
-        # если payload — число (ref id)
-        try:
-            ref = int(payload)
-            await set_referrer(message.from_user.id, ref)
-        except:
-            pass
+async def cmd_start(m: Message):
+    # parse ref param if present: /start 12345
+    args = m.get_args() or ""
+    ref = None
+    if args.isdigit():
+        ref = int(args)
+    await add_user_if_not_exists(m.from_user.id, m.from_user.username, m.from_user.first_name, ref)
+    await m.answer(f"Привет, {m.from_user.first_name}! Добро пожаловать в QuantumFoxEmpire.", reply_markup=main_kb())
 
-    await add_event(message.from_user.id, "start", payload or "")
-    await message.answer(f"Привет, {message.from_user.first_name}! Это QuantumFoxEmpire bot.\nВыбери пункт меню 👇", reply_markup=main_keyboard())
-
-# простой профиль
 @router.message(lambda m: m.text == "🎛 Профиль")
 async def profile(m: Message):
     row = await get_user(m.from_user.id)
-    vip_until = row[6] if row else 0
+    if not row:
+        await m.answer("Вы не зарегистрированы. Отправь /start")
+        return
+    balance = row[4] if row[4] is not None else 0
+    vip_until = row[6] if row[6] is not None else 0
     vip = "Нет"
     if vip_until and vip_until > int(time.time()):
         vip = f"VIP до {time.strftime('%Y-%m-%d', time.localtime(vip_until))}"
-    await m.answer(f"ID: `{m.from_user.id}`\nИмя: {m.from_user.first_name}\n{vip}", parse_mode="Markdown")
+    await m.answer(f"ID: {m.from_user.id}\nИмя: {m.from_user.first_name}\nБаланс: {balance} ₽\n{vip}")
 
 @router.message(lambda m: m.text == "🧑‍🤝‍🧑 Реферальная система")
 async def referral(m: Message):
@@ -58,57 +53,49 @@ async def vpn_menu(m: Message):
     kb = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton("⚡ Молния VPN")],
         [KeyboardButton("🛡 Kovalenko VPN")],
-        [KeyboardButton("🔙 Назад")]
+        [KeyboardButton("🔙 Меню")]
     ], resize_keyboard=True)
     await m.answer("Выберите VPN:", reply_markup=kb)
 
 @router.message(lambda m: m.text in ["⚡ Молния VPN", "🛡 Kovalenko VPN"])
-async def send_vpn(m: Message):
+async def vpn_open(m: Message):
     uid = m.from_user.id
     if m.text.startswith("⚡"):
-        url = VPN_PARTNERS["molniya"].format(uid=uid)
+        url = VPN_PARTNERS["molniya"].format(user=uid)
         name = "Молния VPN"
+        pid = 1
     else:
-        url = VPN_PARTNERS["kovalenko"].format(uid=uid)
+        url = VPN_PARTNERS["kovalenko"].format(user=uid)
         name = "Kovalenko VPN"
-    await m.answer(f"{name}\nВаша реф. ссылка:\n{url}")
+        pid = 2
+    # record click
+    await record_partner_click(pid, uid)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"Перейти к {name}", url=url)]
+    ])
+    await m.answer(f"{name} — твоя реферальная ссылка:", reply_markup=kb)
 
-# AI: отправляем запрос к OpenRouter
-@router.message(lambda m: m.text == "🧠 AI")
-async def ask_ai_menu(m: Message):
-    await m.answer("Отправь сообщение, я отвечу через ИИ. Чтобы выйти — отправь /cancel")
-
-# следующий просто перехватывает текст (простая реализация)
+# AI: simple use: user types "ai: <text>"
 @router.message()
 async def default_handler(m: Message):
     text = (m.text or "").strip()
     if not text:
         return
-    # Если пользователь ранее нажал AI — мы не делаем state machine: простая горячая команда "ai: <text>"
-    if text.startswith("ai:"):
+    if text.lower().startswith("ai:"):
         prompt = text[3:].strip()
         await m.answer("Запрос к ИИ... ⏳")
         out = await ai_answer(prompt)
         await m.answer(out)
         return
 
-    # команды покупки VIP
-    if text == "💳 Купить VIP":
-        kb = ReplyKeyboardMarkup(keyboard=[
-            [KeyboardButton("VIP 30 дней — $7"), KeyboardButton("VIP 1 год — $60")],
-            [KeyboardButton("🔙 Назад")]
-        ], resize_keyboard=True)
-        await m.answer("Выбери план:", reply_markup=kb)
+    if text == "💰 Заработок":
+        await m.answer("Варианты:\n1) Реферальная система\n2) VPN партнерки\n3) Продажа услуг", reply_markup=main_kb())
         return
 
-    if text.startswith("VIP 30"):
-        res = await simulate_purchase(m.from_user.id, "vip_month")
-        await m.answer(res["msg"])
-        return
-    if text.startswith("VIP 1"):
-        res = await simulate_purchase(m.from_user.id, "vip_year")
-        await m.answer(res["msg"])
+    if text == "📤 Сообщить оплату":
+        instr = await manual_payment_instructions()
+        await m.answer(f"Инструкции по оплате:\n{instr['instructions']}\nПосле оплаты отправь скриншот в чат и нажми '🔙 Меню' для возврата.")
         return
 
-    # простой fallback: показываем меню
-    await m.answer("Не понял. Выбери пункт меню:", reply_markup=main_keyboard())
+    # fallback
+    await m.answer("Не понял. Напиши ai: <текст> для ИИ либо выбери пункт меню.", reply_markup=main_kb())
