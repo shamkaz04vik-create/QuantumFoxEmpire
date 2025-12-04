@@ -4,8 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN pip install --no-cache-dir -r requirements.txt || true
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN chmod +x start.sh
-
-CMD ["./start.sh"]
+CMD ["python3", "main.py"]
