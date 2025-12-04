@@ -1,15 +1,18 @@
-BOT_TOKEN = "7340839720:AAFMiGuu_P5Va9QylY64ElbMMynPjhTui6M"
-ADMIN_ID = 7209803923
+# config.py
+BOT_TOKEN = "8456865406:AAGqqDLt4PpMf5QrDEPr7dDXymtTb_eN1_o"
 
-# AI
+# OpenRouter (AI) — твой ключ, вставлен
 OPENROUTER_API_KEY = "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"
 OPENROUTER_MODEL = "openai/gpt-4o-mini"
 
-# Webhook для Render
-WEBHOOK_URL = "https://<your-render-subdomain>.onrender.com/webhook"
+# Админы — добавь сюда свои tg id (числа)
+ADMIN_IDS = [7209803923]  # <- замени/добавь свои id если нужно
 
-# DB
-DATABASE_URL = "postgresql://user:password@host:5432/dbname"
+# Путь к базе (локально в контейнере)
+DB_PATH = "data.sqlite"
 
-# CryptoBot
-CRYPTOBOT_TOKEN = "<TOKEN из @CryptoBot>"
+# VPN партнерки (уже передал тобой)
+VPN_PARTNERS = {
+    "molniya": "https://t.me/molniya_vpn_bot?start=john0_8_{uid}",
+    "kovalenko": "https://t.me/Kovalenkovpn_bot?start=john0_8_{uid}",
+}
