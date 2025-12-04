@@ -1,6 +1,6 @@
 import aiohttp
 
-API_KEY = "ТОТ_КЛЮЧ_КОТОРЫЙ_ТЫ_МНЕ_СЕЙЧАС_ДОЛЖЕН_ДАТЬ"
+API_KEY = "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"
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "openai/gpt-4o-mini"
