@@ -1,37 +1,24 @@
-# ai.py
 import aiohttp
-import asyncio
 from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+URL = "https://openrouter.ai/api/v1/chat/completions"
 
-async def ai_answer(prompt: str, model: str = OPENROUTER_MODEL, max_tokens: int = 700, temperature: float = 0.3) -> str:
-    if not OPENROUTER_API_KEY:
-        return "Ошибка: OpenRouter API key не задан."
-
+async def ai_answer(prompt: str) -> str:
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
     }
+
     body = {
-        "model": model,
+        "model": OPENROUTER_MODEL,
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": temperature,
-        "max_tokens": max_tokens
+        "max_tokens": 500
     }
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(OPENROUTER_URL, headers=headers, json=body, timeout=60) as resp:
-                if resp.status != 200:
-                    text = await resp.text()
-                    return f"Ошибка OpenRouter ({resp.status}): {text}"
+            async with session.post(URL, headers=headers, json=body) as resp:
                 data = await resp.json()
-                try:
-                    return data["choices"][0]["message"]["content"]
-                except Exception:
-                    return str(data)
-    except asyncio.TimeoutError:
-        return "Ошибка: таймаут запроса к ИИ."
+                return data["choices"][0]["message"]["content"]
     except Exception as e:
         return f"Ошибка ИИ: {e}"
