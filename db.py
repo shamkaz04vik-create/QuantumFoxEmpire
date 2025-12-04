@@ -5,13 +5,23 @@ db: aiosqlite.Connection = None
 
 
 # =====================================================
-# ИНИЦИАЛИЗАЦИЯ БД (единое соединение)
+# Получение соединения
+# =====================================================
+async def get_db():
+    global db
+    if db is None:
+        await init_db()
+    return db
+
+
+# =====================================================
+# ИНИЦИАЛИЗАЦИЯ БД
 # =====================================================
 async def init_db():
     global db
 
     db = await aiosqlite.connect(DB_PATH)
-    await db.execute("PRAGMA foreign_keys = ON;")   # важнейшая строка
+    await db.execute("PRAGMA foreign_keys = ON;")
 
     # Таблица пользователей
     await db.execute("""
@@ -25,7 +35,6 @@ async def init_db():
         )
     """)
 
-    # Индексы
     await db.execute("CREATE INDEX IF NOT EXISTS idx_user_ref ON users(referred_by);")
 
     # Таблица платежей
@@ -60,10 +69,11 @@ async def init_db():
 
 
 # =====================================================
-# ФУНКЦИИ (используют единое соединение)
+# ФУНКЦИИ
 # =====================================================
 
 async def add_user(user_id: int, username: str, referred_by: int = None):
+    db = await get_db()
     await db.execute("""
         INSERT OR IGNORE INTO users (user_id, username, referred_by)
         VALUES (?, ?, ?)
@@ -72,6 +82,7 @@ async def add_user(user_id: int, username: str, referred_by: int = None):
 
 
 async def set_premium(user_id: int, status: bool):
+    db = await get_db()
     await db.execute("""
         UPDATE users SET is_premium = ? WHERE user_id = ?
     """, (1 if status else 0, user_id))
@@ -79,17 +90,15 @@ async def set_premium(user_id: int, status: bool):
 
 
 async def add_balance(user_id: int, amount: float):
+    db = await get_db()
     await db.execute("""
         UPDATE users SET balance = balance + ? WHERE user_id = ?
     """, (amount, user_id))
     await db.commit()
 
 
-# =====================================================
-# ПЛАТЁЖИ
-# =====================================================
-
 async def log_payment(user_id: int, amount: float, status: str, method: str, txid: str = None):
+    db = await get_db()
     await db.execute("""
         INSERT INTO payments (user_id, amount, status, method, txid)
         VALUES (?, ?, ?, ?, ?)
@@ -97,11 +106,8 @@ async def log_payment(user_id: int, amount: float, status: str, method: str, txi
     await db.commit()
 
 
-# =====================================================
-# ЛОГИ СООБЩЕНИЙ
-# =====================================================
-
 async def log_message(user_id: int, user_text: str, ai_text: str):
+    db = await get_db()
     await db.execute("""
         INSERT INTO messages (user_id, user_text, ai_text)
         VALUES (?, ?, ?)
@@ -110,7 +116,10 @@ async def log_message(user_id: int, user_text: str, ai_text: str):
 
 
 # =====================================================
-# КОРРЕКТНОЕ ЗАКРЫТИЕ БД
+# ЗАКРЫТИЕ БД
 # =====================================================
 async def close_db():
-    await db.close()
+    global db
+    if db:
+        await db.close()
+        db = None
