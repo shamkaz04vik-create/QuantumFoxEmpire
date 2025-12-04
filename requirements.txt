@@ -1,4 +1,6 @@
-aiogram==3.4.1
+aiogram==3.5.0
+fastapi
+uvicorn[standard]
+asyncpg
 aiohttp
-aiosqlite
-flask
+python-dotenv
