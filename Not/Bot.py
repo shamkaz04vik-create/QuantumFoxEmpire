@@ -1,29 +1,28 @@
-# bot.py
 import asyncio
-import logging
-from aiogram import Bot, Dispatcher
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import Message
+from aiogram.filters import CommandStart
 
 from config import BOT_TOKEN
-from handlers import router as user_router
-from admin import router as admin_router
-from db import init_db, ensure_default_partners
+from ai import ai_answer
+from db import init_db
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
-async def start_bot():
-    # init DB
+@dp.message(CommandStart())
+async def start_cmd(message: Message):
+    await message.answer("Привет! Я умный чат-бот. Напиши мне что-нибудь 👇")
+
+@dp.message(F.text)
+async def handle_message(message: Message):
+    user_text = message.text
+    ai_response = await ai_answer(user_text)
+    await message.answer(ai_response)
+
+async def main():
     await init_db()
-    await ensure_default_partners()
-
-    bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage())
-    dp.include_router(user_router)
-    dp.include_router(admin_router)
-
-    logger.info("Starting polling (useful for local testing)...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(start_bot())
+    asyncio.run(main())
