@@ -8,9 +8,8 @@ async def ai_answer(prompt: str) -> str:
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/yourrepo",
-        "X-Title": "QuantumFoxEmpireBot",
-        "User-Agent": "QuantumFoxEmpireBot"
+        "HTTP-Referer": "https://quantumfoxempire.onrender.com",
+        "User-Agent": "QuantumFoxEmpireBot (https://quantumfoxempire.onrender.com)"
     }
 
     body = {
