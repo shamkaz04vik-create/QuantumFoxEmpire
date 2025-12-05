@@ -7,14 +7,15 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup():
-    print("▶ INIT DB...")
+    print("▶ STARTUP BEGIN")
     await init_db()
-    print("▶ DB READY")
+    print("▶ DB INITIALIZED")
 
-    await bot.set_webhook("https://quantumfoxempire.onrender.com/")
-    print("▶ WEBHOOK SET")
+    WEBHOOK_URL = "https://ТВОЙ-САЙТ-RENDER.onrender.com/webhook"
+    await bot.set_webhook(WEBHOOK_URL)
+    print("▶ WEBHOOK SET:", WEBHOOK_URL)
 
-@app.post("/")
+@app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
     update = Update(**data)
