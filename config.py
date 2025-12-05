@@ -1,27 +1,21 @@
-# =====================================================
-# ⚙ QuantumFoxEmpire — CONFIG
-# =====================================================
+# ===============================
+#   CONFIG.PY — полный файл
+# ===============================
 
-# --- BOT ---
+# --- Telegram Bot Token ---
 BOT_TOKEN = "8456865406:AAGqqDLt4PpMf5QrDEPr7dDXymtTb_eN1_o"
+
+# --- Админ ID ---
 ADMIN_ID = 7209803923
 
-# --- AI: OpenRouter ---
-OPENROUTER_API_KEY = "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"
-OPENROUTER_MODEL = "openai/gpt-4o-mini"
+# --- Путь к базе данных ---
+DB_PATH = "database.db"
 
-# --- Deployment ---
-WEBHOOK_URL = "https://quantumfoxempire.onrender.com/"
-
-# --- Database ---
-DB_PATH = "database.db"      # <-- ВАЖНО: больше НЕ /data/
-
-# --- Payments ---
-CRYPTOBOT_TOKEN = ""
-MANUAL_WALLET = "TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-
-# --- VPN Partners ---
+# --- VPN партнёры ---
 VPN_PARTNERS = {
-    "molniya": "https://t.me/molniya_vpn_bot?start=john0_8_{user}",
-    "kovalenko": "https://t.me/Kovalenkovpn_bot?start=john0_8_{user}"
+    "molniya": "https://molniyavpn.com/?ref={user}",
+    "kovalenko": "https://kovavpn.com/?ref={user}",
 }
+
+# --- Render Webhook URL ---
+WEBHOOK_URL = "https://quantumfoxempire.onrender.com/"
