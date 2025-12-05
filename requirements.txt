@@ -1,5 +1,5 @@
+fastapi
+uvicorn
 aiogram==3.0.0b7
 aiohttp
 aiosqlite
-fastapi
-uvicorn[standard]
