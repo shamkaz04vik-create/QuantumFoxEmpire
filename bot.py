@@ -135,5 +135,5 @@ app = run()
 
 if __name__ == "__main__":
     import os
-    port = int(os.getenv("PORT", 8080))
-    web.run_app(app, port=port)
+    port = int(os.environ.get("PORT", 10000))
+    web.run_app(app, host="0.0.0.0", port=port)
