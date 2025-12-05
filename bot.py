@@ -1,4 +1,4 @@
-# bot.py — определения Bot, Dispatcher и хендлеров
+# bot.py
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from aiogram.filters import Command
@@ -6,15 +6,15 @@ from aiohttp import web
 
 from config import BOT_TOKEN, ADMIN_ID, VPN_PARTNERS
 from ai import ai_answer
-from db import add_user, log_message  # используем только эти две (без лишних зависимостей)
+from db import add_user, log_message
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# /start
 @dp.message(Command("start"))
-async def start_handler(message: Message):
-    # добавим пользователя
-    await add_user(message.from_user.id, message.from_user.username)
+async def start(message: Message):
+    await add_user(message.from_user.id, message.from_user.username or "")
     await message.answer(
         "🔥 Добро пожаловать!\n\n"
         "Я — ИИ-бот. Просто напиши сообщение и я отвечу.\n\n"
@@ -26,68 +26,34 @@ async def start_handler(message: Message):
     )
 
 @dp.message(Command("menu"))
-async def menu_handler(message: Message):
+async def menu(message: Message):
     await message.answer(
         "⚙️ *Меню бота*\n\n"
         "1️⃣ ИИ чат — просто напиши сообщение\n"
         "2️⃣ VPN — /vpn\n"
         "3️⃣ Premium — /premium\n"
-        "4️⃣ Оплата — /pay\n"
-        "5️⃣ Админ панель — /admin",
+        "4️⃣ Оплата — /pay\n",
         parse_mode="Markdown"
     )
 
 @dp.message(Command("vpn"))
-async def vpn_handler(message: Message):
+async def vpn_menu(message: Message):
     user = message.from_user.id
-    molniya = VPN_PARTNERS["molniya"].format(user=user)
-    kovalenko = VPN_PARTNERS["kovalenko"].format(user=user)
-    await message.answer(
-        "🔐 *VPN сервисы:* \n\n"
-        f"⚡ Molniya VPN:\n{molniya}\n\n"
-        f"🛡 Kovalenko VPN:\n{kovalenko}",
-        parse_mode="Markdown"
-    )
-
-@dp.message(Command("premium"))
-async def premium_handler(message: Message):
-    await message.answer(
-        "💎 *Premium*\n\n"
-        "Преимущества:\n- Безлимитный ИИ\n- Быстрые ответы\n- Приоритет\n\n"
-        "Цена: 5 USDT\nОплата — /pay",
-        parse_mode="Markdown"
-    )
-
-@dp.message(Command("pay"))
-async def pay_handler(message: Message):
-    await message.answer(
-        "💰 *Пополнение*\n\n"
-        "Отправь 5 USDT (TRC20) на адрес:\n"
-        "`TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`\n\n"
-        "После оплаты — напиши админу.",
-        parse_mode="Markdown"
-    )
-
-@dp.message(Command("admin"))
-async def admin_handler(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return await message.answer("⛔ Нет доступа")
-    await message.answer(
-        "🛠 *Админ панель*\n\n"
-        "‼️ ВНИМАНИЕ: некоторые функции (setpremium/addbalance) могут быть отключены\n"
-        "Доступно:\n/broadcast TEXT",
-        parse_mode="Markdown"
-    )
+    molniya = VPN_PARTNERS.get("molniya", "").format(user=user)
+    kovalenko = VPN_PARTNERS.get("kovalenko", "").format(user=user)
+    await message.answer(f"⚡ Molniya: {molniya}\n🛡 Kovalenko: {kovalenko}")
 
 @dp.message(F.text)
 async def ai_chat(message: Message):
-    text = message.text
+    text = message.text or ""
     ai_reply = await ai_answer(text)
+    # log_message может бросить, если db не готов — тогда в лог упадёт понятная ошибка
     await log_message(message.from_user.id, text, ai_reply)
     await message.answer(ai_reply)
 
-# --- Webhook helper (если нужен внутри файла — но main.py будет ставить webhook)
-async def handle_webhook(request: web.Request):
-    update = await request.json()
-    await dp.feed_update(bot, update)
+
+# Webhook handler for Render
+async def handle(request: web.Request):
+    data = await request.json()
+    await dp.feed_webhook_update(bot, data)
     return web.Response(text="ok")
