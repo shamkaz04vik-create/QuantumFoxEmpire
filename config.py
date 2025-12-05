@@ -2,29 +2,23 @@
 # ⚙ QuantumFoxEmpire — CONFIG
 # =====================================================
 
-import os
-
 # --- BOT ---
 BOT_TOKEN = "8456865406:AAGqqDLt4PpMf5QrDEPr7dDXymtTb_eN1_o"
 ADMIN_ID = 7209803923
 
 # --- AI: OpenRouter ---
-OPENROUTER_API_KEY = "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"
-OPENROUTER_MODEL = "openai/gpt-4o-mini"
+OPENROUTER_API_KEY = "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"
+OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct"   # стабильная модель
 
 # --- Deployment ---
 WEBHOOK_URL = "https://quantumfoxempire.onrender.com/webhook"
 
 # --- Database ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # путь к корню проекта
-DB_DIR = os.path.join(BASE_DIR, "data")
-os.makedirs(DB_DIR, exist_ok=True)
-
-DB_PATH = os.path.join(DB_DIR, "database.sqlite3")
+DB_PATH = "/data/database.db"
 
 # --- Payments ---
-CRYPTOBOT_TOKEN = ""
-MANUAL_WALLET = "TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+CRYPTOBOT_TOKEN = ""  # если нет — оставить пустым
+MANUAL_WALLET = "TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # USDT TRC20
 
 # --- VPN Partners ---
 VPN_PARTNERS = {
