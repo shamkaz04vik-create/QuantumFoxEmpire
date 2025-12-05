@@ -1,48 +1,51 @@
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import CommandStart
 from aiogram.types import Message
+from aiogram.filters import Command
+from aiohttp import web
 
 from config import BOT_TOKEN, ADMIN_ID, VPN_PARTNERS
 from ai import ai_answer
 from db import add_user, log_message, set_premium, add_balance
 
+
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 # =====================================================
-# /start — регистрация + приветствие
+# /start — простая команда, НЕ start_command
 # =====================================================
-@dp.message(CommandStart())
-async def start_cmd(message: Message):
+@dp.message(Command("start"))
+async def start(message: Message):
     await add_user(message.from_user.id, message.from_user.username)
-    text = (
-        "🔥 Добро пожаловать в QuantumFox Empire!\n\n"
-        "Я — умный ИИ-бот, помощник и инструмент заработка.\n"
-        "Просто напиши любое сообщение — я отвечу.\n\n"
+    await message.answer(
+        "🔥 Добро пожаловать!\n\n"
+        "Я — ИИ-бот. Просто напиши сообщение и я отвечу.\n\n"
         "📌 Команды:\n"
-        "/menu — открыть меню\n"
+        "/menu — меню\n"
+        "/vpn — VPN сервисы\n"
+        "/premium — премиум\n"
+        "/pay — оплата\n"
     )
-    await message.answer(text)
 
 # =====================================================
 # Меню
 # =====================================================
-@dp.message(F.text == "/menu")
+@dp.message(Command("menu"))
 async def menu(message: Message):
     await message.answer(
         "⚙️ *Меню бота*\n\n"
         "1️⃣ ИИ чат — просто напиши сообщение\n"
-        "2️⃣ VPN сервисы — /vpn\n"
+        "2️⃣ VPN — /vpn\n"
         "3️⃣ Premium — /premium\n"
-        "4️⃣ Баланс и оплата — /pay\n"
-        "5️⃣ Админ панель — /admin (если доступно)",
+        "4️⃣ Оплата — /pay\n"
+        "5️⃣ Админ панель — /admin",
         parse_mode="Markdown"
     )
 
 # =====================================================
 # VPN
 # =====================================================
-@dp.message(F.text == "/vpn")
+@dp.message(Command("vpn"))
 async def vpn_menu(message: Message):
     user = message.from_user.id
     molniya = VPN_PARTNERS["molniya"].format(user=user)
@@ -58,52 +61,50 @@ async def vpn_menu(message: Message):
 # =====================================================
 # Premium
 # =====================================================
-@dp.message(F.text == "/premium")
+@dp.message(Command("premium"))
 async def premium(message: Message):
     await message.answer(
-        "💎 *Premium доступ*\n\n"
+        "💎 *Premium*\n\n"
         "Преимущества:\n"
-        "- Безлимитные запросы к ИИ\n"
-        "- Ускоренная скорость\n"
-        "- Приоритетная поддержка\n\n"
-        "Стоимость: 5 USDT\n"
-        "Оплата — команда /pay",
+        "- Безлимитный ИИ\n"
+        "- Быстрые ответы\n"
+        "- Приоритет\n\n"
+        "Цена: 5 USDT\n"
+        "Оплата — /pay",
         parse_mode="Markdown"
     )
 
 # =====================================================
 # Оплата
 # =====================================================
-@dp.message(F.text == "/pay")
+@dp.message(Command("pay"))
 async def pay(message: Message):
     await message.answer(
-        "💰 *Пополнение баланса*\n\n"
-        "Сейчас доступен только ручной способ.\n\n"
+        "💰 *Пополнение*\n\n"
         "Отправь 5 USDT (TRC20) на адрес:\n"
         "`TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`\n\n"
-        "После оплаты напиши админу:\n"
-        f"@admin\n\n"
-        "После подтверждения Premium активируется.",
+        "После оплаты — напиши админу: @admin",
         parse_mode="Markdown"
     )
 
 # =====================================================
 # Админ панель
 # =====================================================
-@dp.message(F.text == "/admin")
+@dp.message(Command("admin"))
 async def admin_panel(message: Message):
     if message.from_user.id != ADMIN_ID:
-        return await message.answer("⛔ У тебя нет доступа.")
+        return await message.answer("⛔ Нет доступа")
+
     await message.answer(
         "🛠 *Админ панель*\n\n"
-        "/setpremium USER_ID — выдать премиум\n"
-        "/addbalance USER_ID SUM — пополнить баланс\n"
-        "/broadcast TEXT — рассылка",
+        "/setpremium USER_ID\n"
+        "/addbalance USER_ID SUM\n"
+        "/broadcast TEXT",
         parse_mode="Markdown"
     )
 
 # --- Выдача премиума
-@dp.message(F.text.startswith("/setpremium"))
+@dp.message(Command("setpremium"))
 async def admin_setpremium(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
@@ -114,10 +115,10 @@ async def admin_setpremium(message: Message):
 
     uid = int(parts[1])
     await set_premium(uid, True)
-    await message.answer("Премиум выдан!")
+    await message.answer("Премиум выдан")
 
-# --- Пополнение баланса
-@dp.message(F.text.startswith("/addbalance"))
+# --- Баланс
+@dp.message(Command("addbalance"))
 async def admin_addbalance(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
@@ -129,17 +130,38 @@ async def admin_addbalance(message: Message):
     uid = int(parts[1])
     amt = float(parts[2])
     await add_balance(uid, amt)
-    await message.answer("Баланс пополнен!")
+    await message.answer("Баланс пополнен")
 
 # =====================================================
-# ИИ Чат
+# ИИ чат
 # =====================================================
 @dp.message(F.text)
 async def ai_chat(message: Message):
-    user_text = message.text
+    text = message.text
 
-    ai_reply = await ai_answer(user_text)
-
-    await log_message(message.from_user.id, user_text, ai_reply)
+    ai_reply = await ai_answer(text)
+    await log_message(message.from_user.id, text, ai_reply)
 
     await message.answer(ai_reply)
+
+
+# =====================================================
+# Webhook для Render
+# =====================================================
+async def handle(request: web.Request):
+    update = await request.json()
+    await dp.feed_webhook_update(bot, update)
+    return web.Response()
+
+
+def setup_webhook(app: web.Application):
+    app.router.add_post("/", handle)
+
+
+def run():
+    app = web.Application()
+    setup_webhook(app)
+    return app
+
+
+app = run()
