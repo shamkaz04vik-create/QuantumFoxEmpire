@@ -5,6 +5,11 @@ db = None
 
 async def init_db():
     global db
+
+    if db is not None:
+        return
+
+    print("▶ CONNECTING TO DB:", DB_PATH)
     db = await aiosqlite.connect(DB_PATH)
     await db.execute("PRAGMA foreign_keys = ON;")
 
@@ -30,6 +35,7 @@ async def init_db():
     """)
 
     await db.commit()
+    print("▶ DB READY")
 
 
 async def add_user(user_id: int, username: str):
@@ -47,10 +53,6 @@ async def log_message(user_id: int, user_text: str, ai_text: str):
     )
     await db.commit()
 
-
-# ----------------------------------------------------
-# Эти функции требуются твоему bot.py
-# ----------------------------------------------------
 
 async def set_premium(user_id: int, is_premium: bool):
     await db.execute(
