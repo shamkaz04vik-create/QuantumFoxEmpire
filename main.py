@@ -1,7 +1,5 @@
 from fastapi import FastAPI, Request
 from aiogram.types import Update
-from aiogram import Bot
-from config import BOT_TOKEN, WEBHOOK_URL
 from bot import dp, bot
 from db import init_db
 
@@ -9,14 +7,14 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup():
-    print("▶️ Инициализация базы...")
-    await init_db()                 # <-- БАЗА ПОДКЛЮЧЕНА
-    print("▶️ Установка webhook...")
-    await bot.set_webhook(WEBHOOK_URL)
-    print("Webhook установлен!")
+    print("▶ INIT DB")
+    await init_db()                 # <---- ЭТО ОБЯЗАТЕЛЬНО!!!
+    print("▶ DB OK")
+    await bot.set_webhook("https://ТВОЙ-RENDER-URL.onrender.com/")
+    print("▶ WEBHOOK OK")
 
 @app.post("/")
-async def telegram_webhook(request: Request):
+async def webhook(request: Request):
     data = await request.json()
     update = Update(**data)
     await dp.feed_update(bot, update)
@@ -24,4 +22,4 @@ async def telegram_webhook(request: Request):
 
 @app.get("/")
 async def home():
-    return {"status": "running"}
+    return {"running": True}
