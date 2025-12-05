@@ -4,3 +4,4 @@ uvicorn
 aiohttp
 aiosqlite
 python-dotenv
+pydantic
