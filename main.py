@@ -1,20 +1,25 @@
 from fastapi import FastAPI, Request
 from aiogram.types import Update
 from aiogram import Bot
+from aiogram import Dispatcher
 
-from config import BOT_TOKEN, WEBHOOK_URL
-from bot import dp, bot
+from config import BOT_TOKEN, WEBHOOK_URL, WEBHOOK_PATH
+from bot import dp, bot   # твой dp из bot.py
 from db import init_db
 
 app = FastAPI()
 
 @app.on_event("startup")
 async def startup():
+    print("Инициализация базы...")
     await init_db()
+
+    print("Установка вебхука...")
     await bot.set_webhook(WEBHOOK_URL)
+
     print("Webhook установлен!")
 
-@app.post("/webhook")
+@app.post(WEBHOOK_PATH)
 async def webhook(request: Request):
     data = await request.json()
     update = Update(**data)
@@ -24,9 +29,3 @@ async def webhook(request: Request):
 @app.get("/")
 async def home():
     return {"status": "running"}
-    
-    if __name__ == "__main__":
-    import os
-    port = int(os.getenv("PORT", 10000))
-    print(f"Starting server on port {port}")
-    web.run_app(app, host="0.0.0.0", port=port)
