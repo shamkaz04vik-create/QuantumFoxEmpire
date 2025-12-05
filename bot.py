@@ -1,206 +1,145 @@
-import asyncio
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 from config import BOT_TOKEN, ADMIN_ID, VPN_PARTNERS
 from ai import ai_answer
-from db import (
-    init_db, add_user, log_message,
-    set_premium, add_balance
-)
+from db import add_user, log_message, set_premium, add_balance
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 # =====================================================
-# /start + реферал
+# /start — регистрация + приветствие
 # =====================================================
-
 @dp.message(CommandStart())
 async def start_cmd(message: Message):
-
-    args = message.text.split()
-
-    ref = None
-    if len(args) > 1 and args[1].isdigit():
-        ref = int(args[1])
-
-    username = message.from_user.username or "unknown"
-
-    await add_user(message.from_user.id, username, ref)
-
+    await add_user(message.from_user.id, message.from_user.username)
     text = (
         "🔥 Добро пожаловать в QuantumFox Empire!\n\n"
-        "Пиши любое сообщение — я отвечу.\n"
-        "Меню: /menu"
+        "Я — умный ИИ-бот, помощник и инструмент заработка.\n"
+        "Просто напиши любое сообщение — я отвечу.\n\n"
+        "📌 Команды:\n"
+        "/menu — открыть меню\n"
     )
-
     await message.answer(text)
-
 
 # =====================================================
 # Меню
 # =====================================================
-
-@dp.message(Command("menu"))
+@dp.message(F.text == "/menu")
 async def menu(message: Message):
     await message.answer(
-        "⚙️ *Меню*\n\n"
-        "/vpn — VPN сервисы\n"
-        "/premium — Premium\n"
-        "/pay — Оплата\n"
-        "/admin — Админ панель",
+        "⚙️ *Меню бота*\n\n"
+        "1️⃣ ИИ чат — просто напиши сообщение\n"
+        "2️⃣ VPN сервисы — /vpn\n"
+        "3️⃣ Premium — /premium\n"
+        "4️⃣ Баланс и оплата — /pay\n"
+        "5️⃣ Админ панель — /admin (если доступно)",
         parse_mode="Markdown"
     )
-
 
 # =====================================================
 # VPN
 # =====================================================
-
-@dp.message(Command("vpn"))
+@dp.message(F.text == "/vpn")
 async def vpn_menu(message: Message):
     user = message.from_user.id
-
     molniya = VPN_PARTNERS["molniya"].format(user=user)
     kovalenko = VPN_PARTNERS["kovalenko"].format(user=user)
 
     await message.answer(
-        f"🔐 *VPN сервисы*\n\n"
+        "🔐 *VPN сервисы:* \n\n"
         f"⚡ Molniya VPN:\n{molniya}\n\n"
         f"🛡 Kovalenko VPN:\n{kovalenko}",
         parse_mode="Markdown"
     )
 
-
 # =====================================================
 # Premium
 # =====================================================
-
-@dp.message(Command("premium"))
+@dp.message(F.text == "/premium")
 async def premium(message: Message):
     await message.answer(
-        "💎 Premium доступ — 5 USDT\n"
-        "Оплатить: /pay",
+        "💎 *Premium доступ*\n\n"
+        "Преимущества:\n"
+        "- Безлимитные запросы к ИИ\n"
+        "- Ускоренная скорость\n"
+        "- Приоритетная поддержка\n\n"
+        "Стоимость: 5 USDT\n"
+        "Оплата — команда /pay",
         parse_mode="Markdown"
     )
-
 
 # =====================================================
 # Оплата
 # =====================================================
-
-@dp.message(Command("pay"))
+@dp.message(F.text == "/pay")
 async def pay(message: Message):
-    try:
-        admin = await bot.get_chat(ADMIN_ID)
-        admin_username = admin.username or "admin"
-    except:
-        admin_username = "admin"
-
     await message.answer(
-        "💰 *Оплата Premium*\n\n"
-        "Отправьте 5 USDT (TRC20) на адрес:\n"
+        "💰 *Пополнение баланса*\n\n"
+        "Сейчас доступен только ручной способ.\n\n"
+        "Отправь 5 USDT (TRC20) на адрес:\n"
         "`TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`\n\n"
-        f"После оплаты напишите админу: @{admin_username}",
+        "После оплаты напиши админу:\n"
+        f"@admin\n\n"
+        "После подтверждения Premium активируется.",
         parse_mode="Markdown"
     )
-
 
 # =====================================================
 # Админ панель
 # =====================================================
-
-@dp.message(Command("admin"))
+@dp.message(F.text == "/admin")
 async def admin_panel(message: Message):
     if message.from_user.id != ADMIN_ID:
-        return await message.answer("⛔ Нет доступа.")
-
+        return await message.answer("⛔ У тебя нет доступа.")
     await message.answer(
         "🛠 *Админ панель*\n\n"
-        "/setpremium ID\n"
-        "/addbalance ID AMOUNT\n"
-        "/broadcast TEXT",
+        "/setpremium USER_ID — выдать премиум\n"
+        "/addbalance USER_ID SUM — пополнить баланс\n"
+        "/broadcast TEXT — рассылка",
         parse_mode="Markdown"
     )
 
-
-# Выдать премиум
-@dp.message(Command("setpremium"))
-async def cmd_setpremium(message: Message):
+# --- Выдача премиума
+@dp.message(F.text.startswith("/setpremium"))
+async def admin_setpremium(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
     parts = message.text.split()
-    if len(parts) != 2 or not parts[1].isdigit():
+    if len(parts) < 2:
         return await message.answer("Формат:\n/setpremium USER_ID")
 
-    await set_premium(int(parts[1]), True)
-    await message.answer("Premium выдан!")
+    uid = int(parts[1])
+    await set_premium(uid, True)
+    await message.answer("Премиум выдан!")
 
-
-# Добавить баланс
-@dp.message(Command("addbalance"))
-async def cmd_addbalance(message: Message):
+# --- Пополнение баланса
+@dp.message(F.text.startswith("/addbalance"))
+async def admin_addbalance(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
     parts = message.text.split()
-    if len(parts) != 3:
-        return await message.answer("Формат:\n/addbalance USER_ID AMOUNT")
+    if len(parts) < 3:
+        return await message.answer("Формат:\n/addbalance USER_ID SUM")
 
-    user_id, amount = parts[1], parts[2]
-
-    if not user_id.isdigit():
-        return await message.answer("USER_ID должен быть числом")
-
-    try:
-        amount = float(amount)
-    except:
-        return await message.answer("AMOUNT должно быть числом")
-
-    await add_balance(int(user_id), amount)
+    uid = int(parts[1])
+    amt = float(parts[2])
+    await add_balance(uid, amt)
     await message.answer("Баланс пополнен!")
 
-
-# Рассылка
-@dp.message(Command("broadcast"))
-async def broadcast(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    text = message.text.replace("/broadcast", "").strip()
-
-    if not text:
-        return await message.answer("Текст пустой.")
-
-    await message.answer("Рассылка запущена (реализация позже).")
-
-
 # =====================================================
-# ИИ чат (ПОСЛЕДНИЙ ХЕНДЛЕР!)
+# ИИ Чат
 # =====================================================
-
-@dp.message(F.text & ~F.text.startswith("/"))
+@dp.message(F.text)
 async def ai_chat(message: Message):
-    user_id = message.from_user.id
-    text = message.text
+    user_text = message.text
 
-    answer = await ai_answer(text)
+    ai_reply = await ai_answer(user_text)
 
-    await log_message(user_id, text, answer)
-    await message.answer(answer)
+    await log_message(message.from_user.id, user_text, ai_reply)
 
-
-# =====================================================
-# MAIN
-# =====================================================
-
-async def main():
-    await init_db()
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    await message.answer(ai_reply)
