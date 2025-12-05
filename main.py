@@ -2,20 +2,21 @@ from fastapi import FastAPI, Request
 from aiogram.types import Update
 from bot import dp, bot
 from db import init_db
+from config import WEBHOOK_URL
 
 app = FastAPI()
 
 @app.on_event("startup")
 async def startup():
-    print("▶ STARTUP BEGIN")
+    print("▶ INIT DB")
     await init_db()
-    print("▶ DB INITIALIZED")
 
-    WEBHOOK_URL = "https://ТВОЙ-САЙТ-RENDER.onrender.com/webhook"
+    print("▶ SET WEBHOOK")
     await bot.set_webhook(WEBHOOK_URL)
-    print("▶ WEBHOOK SET:", WEBHOOK_URL)
 
-@app.post("/webhook")
+    print("▶ READY")
+
+@app.post("/")
 async def webhook(request: Request):
     data = await request.json()
     update = Update(**data)
